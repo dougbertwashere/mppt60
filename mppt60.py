@@ -15,21 +15,16 @@ debug = False
 
 class Register(object):
     def __init__(self, 
-            reg_name,       # Name of register
-            reg_address,    # Register Address value
-            reg_type        # Register Type:  number of 16 bit values to request -> 1, 2.   For strings:  8 for 16 chars, 10 for 20 chars
+            reg_name,           # Name of register
+            reg_address,        # Register Address value
+            reg_type,           # Register Type:  number of 16 bit values to request -> 1, 2.   For strings:  8 for 16 chars, 10 for 20 chars
+            value_decode=None   # value decode function, if any
             ):
         
         self.reg_name = reg_name
         self.reg_address = reg_address
         self.reg_type = reg_type
-        self.reg_value = None
-
-    def setRegValue(self, reg_value):
-        self.reg_value = reg_value
-
-    def getRegValue(self):
-        return self.reg_value
+        self.value_decode = value_decode
 
     def getRegName(self):
         return self.reg_name
@@ -39,6 +34,15 @@ class Register(object):
 
     def getRegType(self):
         return self.reg_type
+
+    def getValueDecode(self):
+        return self.value_decode
+
+#
+#  valueDecode functions
+#
+def decodeConfigStatus(value):
+    return ["Refreshing", "Done"][value]
 
 
 # 
@@ -53,7 +57,7 @@ registers = [
    Register("DeviceNumber",                 0x0029, OneReg),
    Register("SystemInstance",               0x002A, OneReg),
    Register("HW_SerialNumber",              0x002B, String20),
-   Register("ConfigStatus",                 0x0035, OneReg),
+   Register("ConfigStatus",                 0x0035, OneReg, decodeConfigStatus),
    Register("ConfigRefreshCounter",         0x0036, TwoReg),
    Register("DeviceState",                  0x0040, OneReg),
    Register("ChargerEnabledStatus",         0x0041, OneReg),
@@ -76,10 +80,56 @@ registers = [
    Register("DC_OutputPowerPercent",        0x005E, OneReg),
    Register("AuxOutputStatus",              0x005F, OneReg),
    Register("AuxOutputVoltage",             0x0060, TwoReg),
-   
-
+   Register("AuxOutputOnReason",            0x0064, OneReg),
+   Register("AuxOutputOffReason",           0x0065, OneReg),
+   Register("EnergyFromPV_ThisHour",        0x0066, TwoReg),
+   Register("PV_InputActiveThisHour",       0x0068, TwoReg),
    Register("EnergyFromPV_Today",           0x006A, TwoReg),
+   Register("PV_InputActiveToday",          0x006C, TwoReg),
+   Register("EnergyFromPV_ThisWeek",        0x006E, TwoReg),
+   Register("PV_InputActiveThisWeek",       0x0070, TwoReg),
+   Register("EnergyFromPV_ThisMonth",       0x0072, TwoReg),
+   Register("PV_InputActiveThisMonth",      0x0074, TwoReg),
+   Register("EnergyFromPV_ThisYear",        0x0076, TwoReg),
+   Register("PV_InputActiveThisYear",       0x0078, TwoReg),
+   Register("EnergyFromPV_Lifetime",        0x007A, TwoReg),
+   Register("PV_InputActiveLifetime",       0x007C, TwoReg),
+   Register("EnergyToBatteryThisHour",      0x007E, TwoReg),
+   Register("BatteryChareActiveThisHour",   0x0080, TwoReg),
+   Register("EnergyToBatteryToday",         0x0082, TwoReg),
+   Register("EnergyChargeActiveToday",      0x0084, TwoReg),
+   Register("EnergyToBatteryThisWeek",      0x0086, TwoReg),
+   Register("EnergyChargeActiveThisWeek",   0x0088, TwoReg),
+   Register("EnergyToBatteryThisMonth",     0x008A, TwoReg),
+   Register("EnergyChargeActiveThisMonth",  0x008C, TwoReg),
+   Register("EnergyToBatteryThisYear",      0x008E, TwoReg),
+   Register("EnergyChargeActiveThisYear",   0x0090, TwoReg),
+   Register("EnergyToBatteryLifetime",      0x0092, TwoReg),
+   Register("EnergyChargeActiveLifetime",   0x0094, TwoReg),
+   Register("MPPT",                         0x00A0, OneReg),
+   Register("MPPTReferenceVoltage",         0x00A2, TwoReg),
+   Register("BatteryType",                  0x00A5, OneReg),
+   Register("NominalBatteryVoltage",        0x00A6, TwoReg),
+   Register("BatteryBankCapacity",          0x00A8, OneReg),
+   Register("BatteryTempCoefficient",       0x00A9, OneReg),
+   Register("ForceChargerState",            0x00AA, OneReg),
+   Register("Reset",                        0x00AB, OneReg),
+   Register("OperatingMode",                0x00AC, OneReg),
+   Register("Clear",                        0x00AD, OneReg),
+   Register("EqualizeVoltageSetPoint",      0x00AE, TwoReg),
+   Register("BulkVoltageSetPoint",          0x00B0, TwoReg),
+   Register("FloatVoltageSetPoint",         0x00B2, TwoReg),
+   Register("RechargeVoltage",              0x00B4, TwoReg),
+   Register("AbsorptionVoltageSetPoint",    0x00B6, TwoReg),
+   Register("AbsorptionTime",               0x00B8, OneReg),
+   Register("ChargeCycle",                  0x00B9, OneReg),
+   Register("MaximumChargeRate",            0x00BA, OneReg),
+   Register("EqualizeNow",                  0x00BB, OneReg),
+   Register("ChargeMode",                   0x00BE, OneReg),
+   Register("DefaultBatteryTemperature",    0x00BF, OneReg),
+   Register("IdentifyEnable",               0x00C0, OneReg),
    ]
+
 
 #
 # toString a List of int16 values
@@ -120,13 +170,15 @@ def intListToNumber(intList):
 # Retrieve info on the specified CC (by Modbus ID)
 #
 # Iterate over the 'register' list (containing Register instances) for attributes to retrieve
-#
+# 
+# Return a dict, with 'register names' as the key, and an attribute dict as the value 
+# 
 def getInfoFromCC(id):
     global InsightLocalHost
     global registers
     global debug
 
-    results = []    # Init the results List to be returned
+    results = {}        # create a new empty results dict
     
     # Open client socket to gateway server
     try:
@@ -138,26 +190,44 @@ def getInfoFromCC(id):
 
     for reg in registers:
 
-        # get register (encoded) value
-        regValue = c.read_input_registers(reg.reg_address, reg.reg_type)
+        regName = reg.getRegName()
+        regAddress = reg.getRegAddress()
+        regType = reg.getRegType()
+
+        # get register (encoded) value from server
+        regValue = c.read_input_registers(regAddress, regType)
 
         # Determine if 
         #       1 or 2 int16 type
         # OR
         #       must be string type
-        if reg.reg_type == OneReg or reg.reg_type == TwoReg:
+        if regType == OneReg or regType == TwoReg:
             # Form final value from the register contents
             value = intListToNumber(regValue)
         else:
             # Form final string from the register contents
             value = intListToString(regValue)
             
-        reg.setRegValue( value )
+         
+        decoder = reg.getValueDecode()
+        valueDecoded = ""
 
-        results.append(reg)
+        # If there is a decode function for value, run it
+        if decoder != None:
+            valueDecoded = decoder(value)
+
+        # get new dict for the attributes
+        newAttributes = {}
+        newAttributes["reg_address"] = regAddress
+        newAttributes["reg_type"] = regType
+        newAttributes["value"] = value 
+        newAttributes["valueDecoded"] = valueDecoded
+
+        # and add new entry keyed on the name of the register
+        results[regName] = newAttributes
     
         if debug == True:
-            print("Address: %s   Type:  %s   value: %s" % (reg.reg_address, reg.reg_type, value))
+            print("Address: %s   Type:  %s   value: %s" % (regAddress, regType, value))
 
     c.close()
 
@@ -175,17 +245,22 @@ def main():
     # gather info from each of the MMPTs
     for id in mppt_id:
 
-        reg_list = getInfoFromCC(id)
+        reg_dict = getInfoFromCC(id)
 
         print("MPPT %s" % id)
 
-        for reg in reg_list:
-            print("    Name: '%22s' --->   Value: '%s'" % (reg.getRegName(), reg.getRegValue()))
+        for reg in reg_dict:
+            strHex = "0x%0.4X" % reg_dict[reg]["reg_address"]
 
-        mppts[id] = reg_list
+            decoded = reg_dict[reg]["valueDecoded"]
+            if decoded != "":
+                decoded = "[Decode: %s]" % decoded
+            
+            print("    %s Name: '%27s' --->   Value: '%s'  %s" % (strHex, reg, reg_dict[reg]["value"], decoded))
+
+        mppts[id] = reg_dict
 
     return 0
-
 
 if __name__ == "__main__":
     main()
