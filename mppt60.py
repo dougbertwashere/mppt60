@@ -44,6 +44,17 @@ class Register(object):
 def decodeConfigStatus(value):
     return ["Refreshing", "Done"][value]
 
+def decodeDeviceState(value):
+    if value == 255:
+        return "Data Not Available"
+
+    if value < 0 or value > 5:
+        return "Invalid State Value"
+
+    return ["Hibernate", "Power Save", "Safe Mode", "Operating", "Diagnostic Mode", "Remote Power OFff"][value]
+
+def decodeChargerStatus(value):
+    return ["Disabled", "Enabled"][value]
 
 # 
 # Table of registers with name, address and length
@@ -59,8 +70,8 @@ registers = [
    Register("HW_SerialNumber",              0x002B, String20),
    Register("ConfigStatus",                 0x0035, OneReg, decodeConfigStatus),
    Register("ConfigRefreshCounter",         0x0036, TwoReg),
-   Register("DeviceState",                  0x0040, OneReg),
-   Register("ChargerEnabledStatus",         0x0041, OneReg),
+   Register("DeviceState",                  0x0040, OneReg, decodeDeviceState),
+   Register("ChargerEnabledStatus",         0x0041, OneReg, decodeChargerStatus),
    Register("DevicePresent",                0x0042, OneReg),
    Register("ChargeModStatus",              0x0043, OneReg),
    Register("ActiveFaults",                 0x0044, OneReg),
@@ -128,6 +139,37 @@ registers = [
    Register("ChargeMode",                   0x00BE, OneReg),
    Register("DefaultBatteryTemperature",    0x00BF, OneReg),
    Register("IdentifyEnable",               0x00C0, OneReg),
+   Register("AuxOutputActiveLevel",         0x00C1, OneReg),
+   Register("AuxOutputVoltage",             0x00C2, TwoReg),
+   Register("ManualAux",                    0x00C4, OneReg),
+   Register("AuxOutputTriggerSource",       0x00C6, OneReg),
+   Register("LowBatteryVoltageTriggerSet",         0x00C8, TwoReg),
+   Register("LowBatteryVoltageTriggerSetDelay",    0x00CA, OneReg),
+   Register("LowBatteryVoltageTriggerClear",       0x00CC, TwoReg),
+   Register("LowBatteryVoltageTriggerClearDelay",  0x00CE, OneReg),
+   Register("HighBatteryVoltageTriggerSet",        0x00D0, TwoReg),
+   Register("HighBatteryVoltageTriggerSetDelay",   0x00D2, OneReg),
+   Register("HighBatteryVoltageTriggerClear",      0x00D4, TwoReg),
+   Register("HighBatteryVoltageTriggerClearDelay", 0x00D6, OneReg),
+   Register("HighArrayVoltageTriggerSet",          0x00D8, TwoReg),
+   Register("HighArrayVoltageTriggerSetDelay",     0x00DA, OneReg),
+   Register("HighArrayVoltageTriggerClear",        0x00DC, TwoReg),
+   Register("HighArrayVoltageTriggerClearDelay",   0x00DE, OneReg),
+   Register("LowBatteryTempTriggerSet",            0x00E0, TwoReg),
+   Register("LowBatteryTempTriggerSetDelay",       0x00E2, OneReg),
+   Register("LowBatteryTempTriggerClear",          0x00E4, TwoReg),
+   Register("LowBatteryTempTriggerClearDelay",     0x00E6, OneReg),
+   Register("HighBatteryTempTriggerSet",           0x00E8, TwoReg),
+   Register("HighBatteryTempTriggerSetDelay",      0x00EA, OneReg),
+   Register("HighBatteryTempTriggerClear",         0x00EC, TwoReg),
+   Register("HighBatteryTempTriggerClearDelay",    0x00EE, OneReg),
+   Register("HighHeatSinkTempTriggerSet",          0x00F0, TwoReg),
+   Register("HighHeatSinkTempTriggerSetDelay",     0x00F2, OneReg),
+   Register("HighHeatSinkTempTriggerClear",        0x00F4, TwoReg),
+   Register("HighHeatSinkTempTriggerClearDelay",   0x00F6, OneReg),
+   Register("RefreshConfigurationData",            0x00F8, OneReg),
+   Register("DCInputAssociation",                  0x00F9, OneReg),
+   Register("BatteryAssociation",                  0x00FA, OneReg),
    ]
 
 
@@ -256,7 +298,7 @@ def main():
             if decoded != "":
                 decoded = "[Decode: %s]" % decoded
             
-            print("    %s Name: '%27s' --->   Value: '%s'  %s" % (strHex, reg, reg_dict[reg]["value"], decoded))
+            print("    %s Name: '%35s' --->   Value: '%s'  %s" % (strHex, reg, reg_dict[reg]["value"], decoded))
 
         mppts[id] = reg_dict
 
