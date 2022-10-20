@@ -38,6 +38,7 @@ class Register(object):
     def getValueDecode(self):
         return self.value_decode
 
+
 #
 #  valueDecode functions
 #
@@ -56,6 +57,23 @@ def decodeDeviceState(value):
 def decodeChargerStatus(value):
     return ["Disabled", "Enabled"][value]
 
+def decodeDevicePresent(value):
+    return ["Inactive", "Active - Data Valid"][value]
+
+def decodeChargeMode(value):
+    return ["Stand Alone", "Primary", "Secondary"][value]
+
+def decodeActiveFaults(value):
+    return ["No Active Faults", "Has Active Faults"][value]
+
+def decodeActiveWarnings(value):
+    return ["No Active Warning", "Has Active Warnings"][value]
+
+def decodeFaultBitMap0(value):
+    return ""
+
+
+
 # 
 # Table of registers with name, address and length
 #
@@ -72,11 +90,11 @@ registers = [
    Register("ConfigRefreshCounter",         0x0036, TwoReg),
    Register("DeviceState",                  0x0040, OneReg, decodeDeviceState),
    Register("ChargerEnabledStatus",         0x0041, OneReg, decodeChargerStatus),
-   Register("DevicePresent",                0x0042, OneReg),
-   Register("ChargeModStatus",              0x0043, OneReg),
-   Register("ActiveFaults",                 0x0044, OneReg),
-   Register("ActiveWarnings",               0x0045, OneReg),
-   Register("FaultBitmap0",                 0x0046, OneReg),
+   Register("DevicePresent",                0x0042, OneReg, decodeDevicePresent),
+   Register("ChargeModeStatus",             0x0043, OneReg, decodeChargeMode),
+   Register("ActiveFaults",                 0x0044, OneReg, decodeActiveFaults),
+   Register("ActiveWarnings",               0x0045, OneReg, decodeActiveWarnings),
+   Register("FaultBitmap0",                 0x0046, OneReg, decodeFaultBitMap0),
    Register("FaultBitmap1",                 0x0047, OneReg),
    Register("WarningBitmap0",               0x0048, OneReg),
    Register("ChargerStatus",                0x0049, OneReg),
