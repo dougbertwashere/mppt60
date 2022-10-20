@@ -70,7 +70,76 @@ def decodeActiveWarnings(value):
     return ["No Active Warning", "Has Active Warnings"][value]
 
 def decodeFaultBitMap0(value):
-    return ""
+    faultMap = {
+        1<<0:"F2:Capacitor Over-Temperature",
+        1<<1:"F4:Battery Over-Temperature",
+        1<<2:"F5:Ambient Over-Temperature",
+        1<<3:"F9:DC Over-Voltage",
+        1<<4:"F10:Output Under-Voltage Immediate",
+        1<<5:"F11:Output Under-Voltage",
+        1<<6:"F26:Auxiliary Power Supply",
+        1<<7:"F30:Battery Under-Temperature",
+        1<<8:"F54:Auxiliary Power Supply",
+        1<<9:"F55:Heatsink Over-Temperature",
+        1<<10:"F56:Ground Fault",
+        1<<11:"F69:Configuration Fault",
+        1<<12:"F70:DC Over-Voltage",
+        1<<13:"F71:DC Over-current2",
+        1<<14:"F72:SPS Overload",
+        1<<15:"F73:Slow Output Over-Current",
+    }
+
+    result = ""
+
+    # Scan each bit in the value, if set then map to a decoded string from the dict 
+    for i in range (16):
+        bitNum = 1 << i
+        if value & bitNum:
+            result += faultMap[bitNum] + " "
+
+    return result
+
+
+
+def decodeFaultBitMap1(value):
+    faultMap = {
+        1<<0:"F74:Input Over-Voltage",
+        1<<1:"F75:Fan Over-Voltage",
+        1<<2:"F76:Fan Over-Current",
+        1<<3:"F77:Input Over-Current",
+        1<<4:"F78:Output Over-Current",
+        1<<5:"F79:Fan Over-Current",
+        1<<6:"F80:Fan Under-Voltage",
+        1<<7:"F81:Fan Under-Current",
+        1<<8:"F82:Network Power Supply Failure",
+        1<<9:"F90:External BMS Disconnected",
+    }
+
+    result = ""
+
+    # Scan each bit in the value, if set then map to a decoded string from the dict 
+    for i in range (16):
+        bitNum = 1 << i
+        if value & bitNum:
+            result += faultMap[bitNum] + " "
+
+    return result
+
+
+def decodeWarningBitMap0(value):
+    warningMap = {
+        1<<0:"W11:DC Input Over Voltage Warning",
+    }
+
+    result = ""
+
+    # Scan each bit in the value, if set then map to a decoded string from the dict 
+    for i in range (16):
+        bitNum = 1 << i
+        if value & bitNum:
+            result += warningMap[bitNum] + " "
+
+    return result
 
 
 
@@ -95,8 +164,8 @@ registers = [
    Register("ActiveFaults",                 0x0044, OneReg, decodeActiveFaults),
    Register("ActiveWarnings",               0x0045, OneReg, decodeActiveWarnings),
    Register("FaultBitmap0",                 0x0046, OneReg, decodeFaultBitMap0),
-   Register("FaultBitmap1",                 0x0047, OneReg),
-   Register("WarningBitmap0",               0x0048, OneReg),
+   Register("FaultBitmap1",                 0x0047, OneReg, decodeFaultBitMap1),
+   Register("WarningBitmap0",               0x0048, OneReg, decodeWarningBitMap0),
    Register("ChargerStatus",                0x0049, OneReg),
    Register("ConfigurationErrors",          0x004A, TwoReg),
    Register("PV_Voltage",                   0x004C, TwoReg),
