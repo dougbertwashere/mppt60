@@ -18,8 +18,9 @@ class Register(object):
             reg_name,           # Name of register
             reg_address,        # Register Address value
             reg_type,           # Register Type:  number of 16 bit values to request -> 1, 2.   For strings:  8 for 16 chars, 10 for 20 chars
-            unit="-",         # VALUE unit
-            value_decode=None   # value decode function, if any
+            unit="-",           # VALUE unit
+            value_decode=None,  # value decode function, if any
+            offset=None         # Temp offset value
             ):
         
         self.reg_name = reg_name
@@ -27,6 +28,7 @@ class Register(object):
         self.reg_type = reg_type
         self.unit = unit
         self.value_decode = value_decode
+        self.offset = offset
 
     def getRegName(self):
         return self.reg_name
@@ -42,6 +44,9 @@ class Register(object):
 
     def getValueDecode(self):
         return self.value_decode
+
+    def getOffset(self):
+        return self.offset
 
 
 #
@@ -340,17 +345,17 @@ registers = [
    Register("HighArrayVoltageTriggerSetDelay",     0x00DA, OneReg, unit="sec"),
    Register("HighArrayVoltageTriggerClear",        0x00DC, TwoReg, unit="mV"),
    Register("HighArrayVoltageTriggerClearDelay",   0x00DE, OneReg, unit="sec"),
-   Register("LowBatteryTempTriggerSet",            0x00E0, TwoReg, unit="degC"),
+   Register("LowBatteryTempTriggerSet",            0x00E0, TwoReg, unit="degC", offset=-273),
    Register("LowBatteryTempTriggerSetDelay",       0x00E2, OneReg, unit="sec"),
-   Register("LowBatteryTempTriggerClear",          0x00E4, TwoReg, unit="degC"),
+   Register("LowBatteryTempTriggerClear",          0x00E4, TwoReg, unit="degC", offset=-273),
    Register("LowBatteryTempTriggerClearDelay",     0x00E6, OneReg, unit="sec"),
-   Register("HighBatteryTempTriggerSet",           0x00E8, TwoReg, unit="degC"),
+   Register("HighBatteryTempTriggerSet",           0x00E8, TwoReg, unit="degC", offset=-273),
    Register("HighBatteryTempTriggerSetDelay",      0x00EA, OneReg, unit="sec"),
-   Register("HighBatteryTempTriggerClear",         0x00EC, TwoReg, unit="degC"),
+   Register("HighBatteryTempTriggerClear",         0x00EC, TwoReg, unit="degC", offset=-273),
    Register("HighBatteryTempTriggerClearDelay",    0x00EE, OneReg, unit="sec"),
-   Register("HighHeatSinkTempTriggerSet",          0x00F0, TwoReg, unit="degC"),
+   Register("HighHeatSinkTempTriggerSet",          0x00F0, TwoReg, unit="degC", offset=-273),
    Register("HighHeatSinkTempTriggerSetDelay",     0x00F2, OneReg, unit="sec"),
-   Register("HighHeatSinkTempTriggerClear",        0x00F4, TwoReg, unit="degC"),
+   Register("HighHeatSinkTempTriggerClear",        0x00F4, TwoReg, unit="degC", offset=-273),
    Register("HighHeatSinkTempTriggerClearDelay",   0x00F6, OneReg, unit="sec"),
    Register("RefreshConfigurationData",            0x00F8, OneReg),
    Register("DCInputAssociation",                  0x00F9, OneReg, value_decode=decodeDCInputAssociation),
@@ -421,6 +426,7 @@ def getInfoFromCC(id):
         regAddress = reg.getRegAddress()
         regType = reg.getRegType()
         regUnit = reg.getUnit()
+        regOffset = reg.getOffset()
 
         # get register (encoded) value from server
         regValue = c.read_input_registers(regAddress, regType)
@@ -450,6 +456,7 @@ def getInfoFromCC(id):
         newAttributes["reg_type"] = regType
         newAttributes["value"] = value 
         newAttributes["unit"] = regUnit 
+        newAttributes["offset"] = regOffset 
         newAttributes["valueDecoded"] = valueDecoded
 
         # and add new entry keyed on the name of the register
@@ -485,7 +492,14 @@ def main():
             if decoded != "":
                 decoded = "[Decode: %s]" % decoded
             
-            print("    %s Name: '%35s' --->   Value: '%s' (%s)  %s" % (strHex, reg, reg_dict[reg]["value"], reg_dict[reg]["unit"], decoded))
+            value = reg_dict[reg]["value"]
+            unit = reg_dict[reg]["unit"]
+            offset = reg_dict[reg]["offset"]
+
+            if offset != None:
+                value = (value / 1000) + offset
+            
+            print("    %s Name: '%35s' --->   Value: '%s' (%s)  %s" % (strHex, reg, value, unit, decoded))
 
         mppts[id] = reg_dict
 
