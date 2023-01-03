@@ -1,2 +1,3 @@
 *.swp
 *.save
+__pycache__*
