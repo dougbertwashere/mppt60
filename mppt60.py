@@ -1,56 +1,11 @@
-#!/usr/bin/env python 
 
 from pyModbusTCP.client import ModbusClient
-
-
-InsightLocalHost = "insightlocal.lan"       #  Hostname or IP of Conext InsightLocal Gateway - modify/specify for other than default
-mppt_id = [ 30, 31, 32, 33 ]                # Modbus IDs of the Conext CCsa
-
-OneReg = 1
-TwoReg = 2
-String16 = 8
-String20 = 10
-
-debug = False
-
-class Register(object):
-    def __init__(self, 
-            reg_name,           # Name of register
-            reg_address,        # Register Address value
-            reg_type,           # Register Type:  number of 16 bit values to request -> 1, 2.   For strings:  8 for 16 chars, 10 for 20 chars
-            unit="-",           # VALUE unit
-            value_decode=None,  # value decode function, if any
-            offset=None         # Temp offset value
-            ):
-        
-        self.reg_name = reg_name
-        self.reg_address = reg_address
-        self.reg_type = reg_type
-        self.unit = unit
-        self.value_decode = value_decode
-        self.offset = offset
-
-    def getRegName(self):
-        return self.reg_name
-
-    def getRegAddress(self):
-        return self.reg_address
-
-    def getRegType(self):
-        return self.reg_type
-
-    def getUnit(self):
-        return self.unit
-
-    def getValueDecode(self):
-        return self.value_decode
-
-    def getOffset(self):
-        return self.offset
+from Register import Register
 
 
 #
-#  valueDecode functions
+#  Conext MPPT 60 150 charge controller
+#       valueDecode functions
 #
 def decodeConfigStatus(value):
     return ["Refreshing", "Done"][value]
@@ -247,119 +202,119 @@ def decodeBatteryAssociation(value):
 
 
 # 
-# Table of registers with name, address and length
+# Table of mppt60_registers with name, address, length, units, decode functions, offset values
 #
-registers = [
-   Register("DeviceName",                   0x0000, String16),
-   Register("FGA_Number",                   0x000A, String20),
-   Register("UniqueUD_Number",              0x0014, TwoReg),
-   Register("FirmwareVersion",              0x001E, TwoReg),
-   Register("ModbusAddress",                0x0028, OneReg),
-   Register("DeviceNumber",                 0x0029, OneReg),
-   Register("SystemInstance",               0x002A, OneReg),
-   Register("HW_SerialNumber",              0x002B, String20),
-   Register("ConfigStatus",                 0x0035, OneReg, value_decode=decodeConfigStatus),
-   Register("ConfigRefreshCounter",         0x0036, TwoReg),
-   Register("DeviceState",                  0x0040, OneReg, value_decode=decodeDeviceState),
-   Register("ChargerEnabledStatus",         0x0041, OneReg, value_decode=decodeChargerStatus),
-   Register("DevicePresent",                0x0042, OneReg, value_decode=decodeDevicePresent),
-   Register("ChargeModeStatus",             0x0043, OneReg, value_decode=decodeChargeMode),
-   Register("ActiveFaults",                 0x0044, OneReg, value_decode=decodeActiveFaults),
-   Register("ActiveWarnings",               0x0045, OneReg, value_decode=decodeActiveWarnings),
-   Register("FaultBitmap0",                 0x0046, OneReg, value_decode=decodeFaultBitMap0),
-   Register("FaultBitmap1",                 0x0047, OneReg, value_decode=decodeFaultBitMap1),
-   Register("WarningBitmap0",               0x0048, OneReg, value_decode=decodeWarningBitMap0),
-   Register("ChargerStatus",                0x0049, OneReg, value_decode=decodeChargerControllerStatus),
-   Register("ConfigurationErrors",          0x004A, TwoReg),
-   Register("PV_Voltage",                   0x004C, TwoReg, unit="mV"),
-   Register("PV_Current",                   0x004E, TwoReg, unit="mA"),
-   Register("PV_Power",                     0x0050, TwoReg, unit="W"),
-   Register("BatteryTemp",                  0x0056, OneReg, unit="degC"),
-   Register("DC_OutputVoltage",             0x0058, TwoReg, unit="mV"),
-   Register("DC_OutputCurrent",             0x005A, TwoReg, unit="mA"),
-   Register("DC_OutputPower",               0x005C, TwoReg, unit="W"),
-   Register("DC_OutputPowerPercent",        0x005E, OneReg, unit="%"),
-   Register("AuxOutputStatus",              0x005F, OneReg, value_decode=decodeAuxOutputStatus),
-   Register("AuxOutputVoltage",             0x0060, TwoReg, unit="mV"),
-   Register("AuxOutputOnReason",            0x0064, OneReg, value_decode=decodeAuxOutputOnReason),
-   Register("AuxOutputOffReason",           0x0065, OneReg, value_decode=decodeAuxOutputOffReason),
-   Register("EnergyFromPV_ThisHour",        0x0066, TwoReg, unit="Wh"),
-   Register("PV_InputActiveThisHour",       0x0068, TwoReg, unit="sec"),
-   Register("EnergyFromPV_Today",           0x006A, TwoReg, unit="Wh"),
-   Register("PV_InputActiveToday",          0x006C, TwoReg, unit="sec"),
-   Register("EnergyFromPV_ThisWeek",        0x006E, TwoReg, unit="Wh"),
-   Register("PV_InputActiveThisWeek",       0x0070, TwoReg, unit="sec"),
-   Register("EnergyFromPV_ThisMonth",       0x0072, TwoReg, unit="Wh"),
-   Register("PV_InputActiveThisMonth",      0x0074, TwoReg, unit="sec"),
-   Register("EnergyFromPV_ThisYear",        0x0076, TwoReg, unit="Wh"),
-   Register("PV_InputActiveThisYear",       0x0078, TwoReg, unit="sec"),
-   Register("EnergyFromPV_Lifetime",        0x007A, TwoReg, unit="Wh"),
-   Register("PV_InputActiveLifetime",       0x007C, TwoReg, unit="sec"),
-   Register("EnergyToBatteryThisHour",      0x007E, TwoReg, unit="Wh"),
-   Register("BatteryChareActiveThisHour",   0x0080, TwoReg, unit="sec"),
-   Register("EnergyToBatteryToday",         0x0082, TwoReg, unit="Wh"),
-   Register("EnergyChargeActiveToday",      0x0084, TwoReg, unit="sec"),
-   Register("EnergyToBatteryThisWeek",      0x0086, TwoReg, unit="Wh"),
-   Register("EnergyChargeActiveThisWeek",   0x0088, TwoReg, unit="sec"),
-   Register("EnergyToBatteryThisMonth",     0x008A, TwoReg, unit="Wh"),
-   Register("EnergyChargeActiveThisMonth",  0x008C, TwoReg, unit="sec"),
-   Register("EnergyToBatteryThisYear",      0x008E, TwoReg, unit="Wh"),
-   Register("EnergyChargeActiveThisYear",   0x0090, TwoReg, unit="sec"),
-   Register("EnergyToBatteryLifetime",      0x0092, TwoReg, unit="Wh"),
-   Register("EnergyChargeActiveLifetime",   0x0094, TwoReg, unit="sec"),
-   Register("MPPT",                         0x00A0, OneReg, value_decode=decodeMPPT),
-   Register("MPPTReferenceVoltage",         0x00A2, TwoReg, unit="mV"),
-   Register("BatteryType",                  0x00A5, OneReg, value_decode=decodeBatteryType),
-   Register("NominalBatteryVoltage",        0x00A6, TwoReg, unit="mV", value_decode=decodeNominalBatteryVoltage),
-   Register("BatteryBankCapacity",          0x00A8, OneReg, unit="Ah"),
-   Register("BatteryTempCoefficient",       0x00A9, OneReg, unit="mV/degC"),
-   Register("ForceChargerState",            0x00AA, OneReg),
-   Register("Reset",                        0x00AB, OneReg),
-   Register("OperatingMode",                0x00AC, OneReg, value_decode=decodeOperatingMode),
-   Register("Clear",                        0x00AD, OneReg),
-   Register("EqualizeVoltageSetPoint",      0x00AE, TwoReg, unit="mV"),
-   Register("BulkVoltageSetPoint",          0x00B0, TwoReg, unit="mV"),
-   Register("FloatVoltageSetPoint",         0x00B2, TwoReg, unit="mV"),
-   Register("RechargeVoltage",              0x00B4, TwoReg, unit="mV"),
-   Register("AbsorptionVoltageSetPoint",    0x00B6, TwoReg, unit="mV"),
-   Register("AbsorptionTime",               0x00B8, OneReg, unit="min"),
-   Register("ChargeCycle",                  0x00B9, OneReg, value_decode=decodeChargeCycle),
-   Register("MaximumChargeRate",            0x00BA, OneReg, unit="%"),
-   Register("EqualizeNow",                  0x00BB, OneReg),
-   Register("ChargeMode",                   0x00BE, OneReg, value_decode=decodeChargeMode),
-   Register("DefaultBatteryTemperature",    0x00BF, OneReg),
-   Register("IdentifyEnable",               0x00C0, OneReg),
-   Register("AuxOutputActiveLevel",         0x00C1, OneReg),
-   Register("AuxOutputVoltage",             0x00C2, TwoReg, unit="mV"),
-   Register("ManualAux",                    0x00C4, OneReg),
-   Register("AuxOutputTriggerSource",       0x00C6, OneReg, value_decode=decodeAuxOutputTriggerSource),
-   Register("LowBatteryVoltageTriggerSet",         0x00C8, TwoReg, unit="mV"),
-   Register("LowBatteryVoltageTriggerSetDelay",    0x00CA, OneReg, unit="sec"),
-   Register("LowBatteryVoltageTriggerClear",       0x00CC, TwoReg, unit="mV"),
-   Register("LowBatteryVoltageTriggerClearDelay",  0x00CE, OneReg, unit="sec"),
-   Register("HighBatteryVoltageTriggerSet",        0x00D0, TwoReg, unit="mV"),
-   Register("HighBatteryVoltageTriggerSetDelay",   0x00D2, OneReg, unit="sec"),
-   Register("HighBatteryVoltageTriggerClear",      0x00D4, TwoReg, unit="mV"),
-   Register("HighBatteryVoltageTriggerClearDelay", 0x00D6, OneReg, unit="sec"),
-   Register("HighArrayVoltageTriggerSet",          0x00D8, TwoReg, unit="mV"),
-   Register("HighArrayVoltageTriggerSetDelay",     0x00DA, OneReg, unit="sec"),
-   Register("HighArrayVoltageTriggerClear",        0x00DC, TwoReg, unit="mV"),
-   Register("HighArrayVoltageTriggerClearDelay",   0x00DE, OneReg, unit="sec"),
-   Register("LowBatteryTempTriggerSet",            0x00E0, TwoReg, unit="degC", offset=-273),
-   Register("LowBatteryTempTriggerSetDelay",       0x00E2, OneReg, unit="sec"),
-   Register("LowBatteryTempTriggerClear",          0x00E4, TwoReg, unit="degC", offset=-273),
-   Register("LowBatteryTempTriggerClearDelay",     0x00E6, OneReg, unit="sec"),
-   Register("HighBatteryTempTriggerSet",           0x00E8, TwoReg, unit="degC", offset=-273),
-   Register("HighBatteryTempTriggerSetDelay",      0x00EA, OneReg, unit="sec"),
-   Register("HighBatteryTempTriggerClear",         0x00EC, TwoReg, unit="degC", offset=-273),
-   Register("HighBatteryTempTriggerClearDelay",    0x00EE, OneReg, unit="sec"),
-   Register("HighHeatSinkTempTriggerSet",          0x00F0, TwoReg, unit="degC", offset=-273),
-   Register("HighHeatSinkTempTriggerSetDelay",     0x00F2, OneReg, unit="sec"),
-   Register("HighHeatSinkTempTriggerClear",        0x00F4, TwoReg, unit="degC", offset=-273),
-   Register("HighHeatSinkTempTriggerClearDelay",   0x00F6, OneReg, unit="sec"),
-   Register("RefreshConfigurationData",            0x00F8, OneReg),
-   Register("DCInputAssociation",                  0x00F9, OneReg, value_decode=decodeDCInputAssociation),
-   Register("BatteryAssociation",                  0x00FA, OneReg, value_decode=decodeBatteryAssociation),
+mppt60_registers = [
+   Register("DeviceName",                   0x0000, Register.String16),
+   Register("FGA_Number",                   0x000A, Register.String20),
+   Register("UniqueUD_Number",              0x0014, Register.TwoReg),
+   Register("FirmwareVersion",              0x001E, Register.TwoReg),
+   Register("ModbusAddress",                0x0028, Register.OneReg),
+   Register("DeviceNumber",                 0x0029, Register.OneReg),
+   Register("SystemInstance",               0x002A, Register.OneReg),
+   Register("HW_SerialNumber",              0x002B, Register.String20),
+   Register("ConfigStatus",                 0x0035, Register.OneReg, value_decode=decodeConfigStatus),
+   Register("ConfigRefreshCounter",         0x0036, Register.TwoReg),
+   Register("DeviceState",                  0x0040, Register.OneReg, value_decode=decodeDeviceState),
+   Register("ChargerEnabledStatus",         0x0041, Register.OneReg, value_decode=decodeChargerStatus),
+   Register("DevicePresent",                0x0042, Register.OneReg, value_decode=decodeDevicePresent),
+   Register("ChargeModeStatus",             0x0043, Register.OneReg, value_decode=decodeChargeMode),
+   Register("ActiveFaults",                 0x0044, Register.OneReg, value_decode=decodeActiveFaults),
+   Register("ActiveWarnings",               0x0045, Register.OneReg, value_decode=decodeActiveWarnings),
+   Register("FaultBitmap0",                 0x0046, Register.OneReg, value_decode=decodeFaultBitMap0),
+   Register("FaultBitmap1",                 0x0047, Register.OneReg, value_decode=decodeFaultBitMap1),
+   Register("WarningBitmap0",               0x0048, Register.OneReg, value_decode=decodeWarningBitMap0),
+   Register("ChargerStatus",                0x0049, Register.OneReg, value_decode=decodeChargerControllerStatus),
+   Register("ConfigurationErrors",          0x004A, Register.TwoReg),
+   Register("PV_Voltage",                   0x004C, Register.TwoReg, unit="mV"),
+   Register("PV_Current",                   0x004E, Register.TwoReg, unit="mA"),
+   Register("PV_Power",                     0x0050, Register.TwoReg, unit="W"),
+   Register("BatteryTemp",                  0x0056, Register.OneReg, unit="degC"),
+   Register("DC_OutputVoltage",             0x0058, Register.TwoReg, unit="mV"),
+   Register("DC_OutputCurrent",             0x005A, Register.TwoReg, unit="mA"),
+   Register("DC_OutputPower",               0x005C, Register.TwoReg, unit="W"),
+   Register("DC_OutputPowerPercent",        0x005E, Register.OneReg, unit="%"),
+   Register("AuxOutputStatus",              0x005F, Register.OneReg, value_decode=decodeAuxOutputStatus),
+   Register("AuxOutputVoltage",             0x0060, Register.TwoReg, unit="mV"),
+   Register("AuxOutputOnReason",            0x0064, Register.OneReg, value_decode=decodeAuxOutputOnReason),
+   Register("AuxOutputOffReason",           0x0065, Register.OneReg, value_decode=decodeAuxOutputOffReason),
+   Register("EnergyFromPV_ThisHour",        0x0066, Register.TwoReg, unit="Wh"),
+   Register("PV_InputActiveThisHour",       0x0068, Register.TwoReg, unit="sec"),
+   Register("EnergyFromPV_Today",           0x006A, Register.TwoReg, unit="Wh"),
+   Register("PV_InputActiveToday",          0x006C, Register.TwoReg, unit="sec"),
+   Register("EnergyFromPV_ThisWeek",        0x006E, Register.TwoReg, unit="Wh"),
+   Register("PV_InputActiveThisWeek",       0x0070, Register.TwoReg, unit="sec"),
+   Register("EnergyFromPV_ThisMonth",       0x0072, Register.TwoReg, unit="Wh"),
+   Register("PV_InputActiveThisMonth",      0x0074, Register.TwoReg, unit="sec"),
+   Register("EnergyFromPV_ThisYear",        0x0076, Register.TwoReg, unit="Wh"),
+   Register("PV_InputActiveThisYear",       0x0078, Register.TwoReg, unit="sec"),
+   Register("EnergyFromPV_Lifetime",        0x007A, Register.TwoReg, unit="Wh"),
+   Register("PV_InputActiveLifetime",       0x007C, Register.TwoReg, unit="sec"),
+   Register("EnergyToBatteryThisHour",      0x007E, Register.TwoReg, unit="Wh"),
+   Register("BatteryChareActiveThisHour",   0x0080, Register.TwoReg, unit="sec"),
+   Register("EnergyToBatteryToday",         0x0082, Register.TwoReg, unit="Wh"),
+   Register("EnergyChargeActiveToday",      0x0084, Register.TwoReg, unit="sec"),
+   Register("EnergyToBatteryThisWeek",      0x0086, Register.TwoReg, unit="Wh"),
+   Register("EnergyChargeActiveThisWeek",   0x0088, Register.TwoReg, unit="sec"),
+   Register("EnergyToBatteryThisMonth",     0x008A, Register.TwoReg, unit="Wh"),
+   Register("EnergyChargeActiveThisMonth",  0x008C, Register.TwoReg, unit="sec"),
+   Register("EnergyToBatteryThisYear",      0x008E, Register.TwoReg, unit="Wh"),
+   Register("EnergyChargeActiveThisYear",   0x0090, Register.TwoReg, unit="sec"),
+   Register("EnergyToBatteryLifetime",      0x0092, Register.TwoReg, unit="Wh"),
+   Register("EnergyChargeActiveLifetime",   0x0094, Register.TwoReg, unit="sec"),
+   Register("MPPT",                         0x00A0, Register.OneReg, value_decode=decodeMPPT),
+   Register("MPPTReferenceVoltage",         0x00A2, Register.TwoReg, unit="mV"),
+   Register("BatteryType",                  0x00A5, Register.OneReg, value_decode=decodeBatteryType),
+   Register("NominalBatteryVoltage",        0x00A6, Register.TwoReg, unit="mV", value_decode=decodeNominalBatteryVoltage),
+   Register("BatteryBankCapacity",          0x00A8, Register.OneReg, unit="Ah"),
+   Register("BatteryTempCoefficient",       0x00A9, Register.OneReg, unit="mV/degC"),
+   Register("ForceChargerState",            0x00AA, Register.OneReg),
+   Register("Reset",                        0x00AB, Register.OneReg),
+   Register("OperatingMode",                0x00AC, Register.OneReg, value_decode=decodeOperatingMode),
+   Register("Clear",                        0x00AD, Register.OneReg),
+   Register("EqualizeVoltageSetPoint",      0x00AE, Register.TwoReg, unit="mV"),
+   Register("BulkVoltageSetPoint",          0x00B0, Register.TwoReg, unit="mV"),
+   Register("FloatVoltageSetPoint",         0x00B2, Register.TwoReg, unit="mV"),
+   Register("RechargeVoltage",              0x00B4, Register.TwoReg, unit="mV"),
+   Register("AbsorptionVoltageSetPoint",    0x00B6, Register.TwoReg, unit="mV"),
+   Register("AbsorptionTime",               0x00B8, Register.OneReg, unit="min"),
+   Register("ChargeCycle",                  0x00B9, Register.OneReg, value_decode=decodeChargeCycle),
+   Register("MaximumChargeRate",            0x00BA, Register.OneReg, unit="%"),
+   Register("EqualizeNow",                  0x00BB, Register.OneReg),
+   Register("ChargeMode",                   0x00BE, Register.OneReg, value_decode=decodeChargeMode),
+   Register("DefaultBatteryTemperature",    0x00BF, Register.OneReg),
+   Register("IdentifyEnable",               0x00C0, Register.OneReg),
+   Register("AuxOutputActiveLevel",         0x00C1, Register.OneReg),
+   Register("AuxOutputVoltage",             0x00C2, Register.TwoReg, unit="mV"),
+   Register("ManualAux",                    0x00C4, Register.OneReg),
+   Register("AuxOutputTriggerSource",       0x00C6, Register.OneReg, value_decode=decodeAuxOutputTriggerSource),
+   Register("LowBatteryVoltageTriggerSet",         0x00C8, Register.TwoReg, unit="mV"),
+   Register("LowBatteryVoltageTriggerSetDelay",    0x00CA, Register.OneReg, unit="sec"),
+   Register("LowBatteryVoltageTriggerClear",       0x00CC, Register.TwoReg, unit="mV"),
+   Register("LowBatteryVoltageTriggerClearDelay",  0x00CE, Register.OneReg, unit="sec"),
+   Register("HighBatteryVoltageTriggerSet",        0x00D0, Register.TwoReg, unit="mV"),
+   Register("HighBatteryVoltageTriggerSetDelay",   0x00D2, Register.OneReg, unit="sec"),
+   Register("HighBatteryVoltageTriggerClear",      0x00D4, Register.TwoReg, unit="mV"),
+   Register("HighBatteryVoltageTriggerClearDelay", 0x00D6, Register.OneReg, unit="sec"),
+   Register("HighArrayVoltageTriggerSet",          0x00D8, Register.TwoReg, unit="mV"),
+   Register("HighArrayVoltageTriggerSetDelay",     0x00DA, Register.OneReg, unit="sec"),
+   Register("HighArrayVoltageTriggerClear",        0x00DC, Register.TwoReg, unit="mV"),
+   Register("HighArrayVoltageTriggerClearDelay",   0x00DE, Register.OneReg, unit="sec"),
+   Register("LowBatteryTempTriggerSet",            0x00E0, Register.TwoReg, unit="degC", offset=-273),
+   Register("LowBatteryTempTriggerSetDelay",       0x00E2, Register.OneReg, unit="sec"),
+   Register("LowBatteryTempTriggerClear",          0x00E4, Register.TwoReg, unit="degC", offset=-273),
+   Register("LowBatteryTempTriggerClearDelay",     0x00E6, Register.OneReg, unit="sec"),
+   Register("HighBatteryTempTriggerSet",           0x00E8, Register.TwoReg, unit="degC", offset=-273),
+   Register("HighBatteryTempTriggerSetDelay",      0x00EA, Register.OneReg, unit="sec"),
+   Register("HighBatteryTempTriggerClear",         0x00EC, Register.TwoReg, unit="degC", offset=-273),
+   Register("HighBatteryTempTriggerClearDelay",    0x00EE, Register.OneReg, unit="sec"),
+   Register("HighHeatSinkTempTriggerSet",          0x00F0, Register.TwoReg, unit="degC", offset=-273),
+   Register("HighHeatSinkTempTriggerSetDelay",     0x00F2, Register.OneReg, unit="sec"),
+   Register("HighHeatSinkTempTriggerClear",        0x00F4, Register.TwoReg, unit="degC", offset=-273),
+   Register("HighHeatSinkTempTriggerClearDelay",   0x00F6, Register.OneReg, unit="sec"),
+   Register("RefreshConfigurationData",            0x00F8, Register.OneReg),
+   Register("DCInputAssociation",                  0x00F9, Register.OneReg, value_decode=decodeDCInputAssociation),
+   Register("BatteryAssociation",                  0x00FA, Register.OneReg, value_decode=decodeBatteryAssociation),
    ]
 
 
@@ -405,22 +360,20 @@ def intListToNumber(intList):
 # 
 # Return a dict, with 'register names' as the key, and an attribute dict as the value 
 # 
-def getInfoFromCC(id):
-    global InsightLocalHost
-    global registers
-    global debug
+def getInfoFromCC(id, interface_host, debug):
+    global mppt60_registers
 
     results = {}        # create a new empty results dict
     
     # Open client socket to gateway server
     try:
-        c = ModbusClient(host=InsightLocalHost, port=503, unit_id=id, timeout=10, auto_close=True)
+        c = ModbusClient(host=interface_host, port=503, unit_id=id, timeout=10, auto_close=True)
     except ValueError:
         print("Error with Host or Port parms")
         return None
 
 
-    for reg in registers:
+    for reg in mppt60_registers:
 
         regName = reg.getRegName()
         regAddress = reg.getRegAddress()
@@ -435,7 +388,7 @@ def getInfoFromCC(id):
         #       1 or 2 int16 type
         # OR
         #       must be string type
-        if regType == OneReg or regType == TwoReg:
+        if regType == Register.OneReg or regType == Register.TwoReg:
             # Form final value from the register contents
             value = intListToNumber(regValue)
         else:
@@ -468,42 +421,3 @@ def getInfoFromCC(id):
     c.close()
 
     return results
-
-
-
-# Main entry point
-def main():
-
-    global mppt_id 
-
-    mppts = {}
-
-    # gather info from each of the MMPTs
-    for id in mppt_id:
-
-        reg_dict = getInfoFromCC(id)
-
-        print("MPPT %s" % id)
-
-        for reg in reg_dict:
-            strHex = "0x%0.4X" % reg_dict[reg]["reg_address"]
-
-            decoded = reg_dict[reg]["valueDecoded"]
-            if decoded != "":
-                decoded = "[Decode: %s]" % decoded
-            
-            value = reg_dict[reg]["value"]
-            unit = reg_dict[reg]["unit"]
-            offset = reg_dict[reg]["offset"]
-
-            if offset != None:
-                value = (value / 1000) + offset
-            
-            print("    %s Name: '%35s' --->   Value: '%s' (%s)  %s" % (strHex, reg, value, unit, decoded))
-
-        mppts[id] = reg_dict
-
-    return 0
-
-if __name__ == "__main__":
-    main()
